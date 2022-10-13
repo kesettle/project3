@@ -1,0 +1,7 @@
+---
+title: "ST 558 Project 3"
+author: "Katelyn Settlemyre, Xi Zeng"
+date: "2022-10-13"
+output: html_document
+---
+
