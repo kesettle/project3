@@ -2,6 +2,31 @@
 title: "ST 558 Project 3"
 author: "Katelyn Settlemyre, Xi Zeng"
 date: "2022-10-13"
-output: html_document
 ---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(caret)
+library(ggplot2)
+```
+
+# Package List  
+Below is the package list needed for this project.
+```{r}
+library(tidyverse)
+library(caret)
+library(ggplot2)  
+```
+
+# Introduction  
+The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations.  
+For our project, we will take variables(With description of each variable):
++
++
++
++
+The response variable that we are interested in is the `shares` variable.
+
 
