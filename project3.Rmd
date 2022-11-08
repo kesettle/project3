@@ -105,11 +105,26 @@ According to the scatter plot above, it seems that when the rate of positive wor
 
 #Barplots
 
-Below are the barplots of several variables：  
+Below are the bar plot for the number of keywords：  
 
 ```{r}
 # Create bar plot of predictor "is_weekend"
-g <- ggplot(data = train, aes(x = is_weekend))
-g + geom_bar(fill = "cyan2") +
-  labs(title = "Bar Plot of is_weekend")
+g <- ggplot(data = train, aes(x = num_keywords, fill= is_weekend))
+g + geom_bar(aes(fill= is_weekend),position = "dodge") +
+  xlab("Number of keywords")+
+  ggtitle("Bar Plot of number of keyword")+
+  scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
+```
+
+According to the bar plot above, The weekday published articles drives the total number of published articles. Also, A large proportion of articles have 10 keywords in the metadata. It seems more keywords is beneficial for article search, which could result in higher sales.  
+
+# Boxplots  
+
+Below are the box plot for sales:  
+
+```{r}
+g <- ggplot(train, aes(x = is_weekend, y = shares))
+g + geom_point()
+  #labs( title = "Boxplot for shares for different number of keywords") + 
+  #geom_point(aes(color = is_weekend ),position = "jitter") 
 ```
