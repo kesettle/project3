@@ -27,6 +27,7 @@ For our project, we will take variables(With description of each variable):
 + average_token_length: Average length of the words in the content  
 + is_weekend: Was the article published on the weekend?  
 + global_rate_positive_words: Rate of positive words in the content  
++ num_keywords: Number of keywords in the metadata  
 
 The response variable that we are interested in is the `shares` variable, which stands for the number of sales in social network. A basic EDA will be performed at first to examine the relationship between covariates and `shares`. Then predicted modeling is applied to predict the number of sales, which will be illustrated in detail below.
 
@@ -39,7 +40,7 @@ news <- read_csv("OnlineNewsPopularity.csv",show_col_types = FALSE)
 subnews <- subset(news, data_channel_is_lifestyle == 1)
 
 #Select variables for modeling and EDA
-subnews <- subnews%>% select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares)
+subnews <- subnews%>% select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares,num_keywords)
 subnews$is_weekend <- as.factor(subnews$is_weekend)
 ```
  
@@ -54,7 +55,6 @@ index <- createDataPartition(subnews$shares,p = 0.7,list = FALSE)
 train <- subnews[index,]
 test <- subnews[-index,]
 
-
 ```
 
 
@@ -62,6 +62,54 @@ test <- subnews[-index,]
 
 In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, boxplots, frequency tables are generated to examine the relationship between the variables.  
 ```{r}
-#Summary statistics
+#Define function for producing summary statistics
+sum <- function(x){
+  min <- min(x)
+  mean <- mean(x)
+  median <- median(x)
+  max <- max(x)
+  sd <- sd(x)
+  return(list(Minimum = min, Mean = mean, Median = median, Maximum = max, `Standard Deviation` = sd(x)))
+}
 
+#Calculate summary statistic for variables
+sum(subnews$n_tokens_title)
+sum(subnews$n_tokens_content)
 
+```
+
+After producing summary statistics, some plots and tables are shown below:  
+
+## Frequency table  
+
+Below shows the frequency table of number of keywords.  
+```{r}
+ table(train$num_keywords)
+```
+
+According to the table, most of the articles have more than 5 keywords. We assume that more keywords in the metadata will increase shares.  
+
+## Scatter plots
+
+Below are the scatter plots for the chosen variables.  
+```{r}
+ggplot(data = train, aes(x = global_rate_positive_words, y = shares))+
+geom_point(aes(color = is_weekend)) +
+  labs(x = "Rate of positive words in the content",
+       y = "Number of Shares",
+       title = "Scatter Plot of Shares vs Rate of positive words in the content") +
+  scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
+```
+
+According to the scatter plot above, it seems that when the rate of positive words exceeds 0.075, the number of shares of the article is relatively small. Also, those articles with high shares are mostly published during weekdays rather than weekend.  
+
+#Barplots
+
+Below are the barplots of several variables：  
+
+```{r}
+# Create bar plot of predictor "is_weekend"
+g <- ggplot(data = train, aes(x = is_weekend))
+g + geom_bar(fill = "cyan2") +
+  labs(title = "Bar Plot of is_weekend")
+```
