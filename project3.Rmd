@@ -29,7 +29,7 @@ For our project, we will take variables(With description of each variable):
 + global_rate_positive_words: Rate of positive words in the content  
 + num_keywords: Number of keywords in the metadata  
 
-The response variable that we are interested in is the `shares` variable, which stands for the number of sales in social network. A basic EDA will be performed at first to examine the relationship between covariates and `shares`. Then predicted modeling is applied to predict the number of sales, which will be illustrated in detail below.
+The response variable that we are interested in is the `shares` variable, which stands for the number of sales in social network. A basic EDA will be performed at first to examine the relationship between covariates and `shares`. Then predicted modeling is applied to predict the number of sales, which will be illustrated in detail below.  
 
 # Data read in
 ```{r}
@@ -103,7 +103,7 @@ geom_point(aes(color = is_weekend)) +
 
 According to the scatter plot above, it seems that when the rate of positive words exceeds 0.075, the number of shares of the article is relatively small. Also, those articles with high shares are mostly published during weekdays rather than weekend.  
 
-#Barplots
+## Barplots
 
 Below are the bar plot for the number of keywords：  
 
@@ -116,15 +116,74 @@ g + geom_bar(aes(fill= is_weekend),position = "dodge") +
   scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-According to the bar plot above, The weekday published articles drives the total number of published articles. Also, A large proportion of articles have 10 keywords in the metadata. It seems more keywords is beneficial for article search, which could result in higher sales.  
+According to the bar plot, the frequency count of the each number of keywords is shown, also ,it will be group into weekday and weekend to see if there is any difference between them.  
 
-# Boxplots  
+## Boxplots  
 
 Below are the box plot for sales:  
 
 ```{r}
 g <- ggplot(train, aes(x = is_weekend, y = shares))
-g + geom_point()
-  #labs( title = "Boxplot for shares for different number of keywords") + 
-  #geom_point(aes(color = is_weekend ),position = "jitter") 
+g + geom_point(aes(color = is_weekend), position = "jitter")+
+  ggtitle("Jitter Plot for shares on weekday/weekend") + xlab("is_weekend")+
+  scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
+```
+
+A jitter plot is generated to see the spread of shares data in weekdays and weekends.  
+
+# Model fitting  
+
+Below is the model fitting part. In this part, 4 models are fitted. They are: linear regression model, random forest model and boosted tree model.
+
+## Linear Regression  
+
+```{r}
+#Use forward selection to determine the predictors used for the model
+lm_forward <- train(shares~ .,
+                    data = train,
+                    method = "glmStepAIC",
+                    direction = "forward",
+                    trControl = trainControl("cv",number=10),
+                    trace = FALSE)
+lm_forward$finalModel
+
+#Fit model with selected variables on test data
+lmod_pred <- predict(lm_forward, newdata = test)
+
+#Calculate test error
+lmod1_RMSE <- RMSE(lmod_pred,test$shares)
+lmod1_RMSE
+```
+
+
+## Random Forest Model  
+
+## Boosted Tree Model  
+
+Below is the process of fitting a boosted tree model, also model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, I use the 
+
+```{r}
+#Set tuning grid for boosted tree model
+boost_grid <- expand.grid(n.trees = c(25,50,100,150,200),
+                          interaction.depth = c(1:5),
+                          shrinkage = c(0.1,0.2,0.3,0.4,0.5),
+                          n.minobsinnode = 10)
+boost_grid
+
+#Train the model
+boost_fit <- train(shares ~., data = train,
+                   method = "gbm",
+                   trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3),
+                   preProcess = c("center", "scale"),
+                   tuneGrid = boost_grid,
+                   verbose = FALSE)
+
+boost_fit$bestTune
+
+#Fit the final boosted tree model with test data
+boost_pred <- predict(boost_fit, newdata = test)
+
+#Calculate test RMSE for model performance
+boost_RMSE <- RMSE(boost_pred,test$shares)
+boost_RMSE
 ```
