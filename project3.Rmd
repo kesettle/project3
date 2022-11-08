@@ -7,26 +7,61 @@ date: "2022-10-13"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(caret)
-library(ggplot2)
 ```
 
 # Package List  
 Below is the package list needed for this project.
 ```{r}
+library(readr)
 library(tidyverse)
 library(caret)
 library(ggplot2)  
 ```
 
 # Introduction  
-The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations.  
+The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. The lifestyle channel is first chosen for analysis.  
 For our project, we will take variables(With description of each variable):
-+
-+
-+
-+
-The response variable that we are interested in is the `shares` variable.
++ n_tokens_title: Number of words in the title  
++ n_tokens_content: Number of words in the content  
++ num_imgs: Number of images  
++ average_token_length: Average length of the words in the content  
++ is_weekend: Was the article published on the weekend?  
++ global_rate_positive_words: Rate of positive words in the content  
+
+The response variable that we are interested in is the `shares` variable, which stands for the number of sales in social network. A basic EDA will be performed at first to examine the relationship between covariates and `shares`. Then predicted modeling is applied to predict the number of sales, which will be illustrated in detail below.
+
+# Data read in
+```{r}
+#Read in data
+news <- read_csv("OnlineNewsPopularity.csv",show_col_types = FALSE)
+
+#Subset data with a single data channel
+subnews <- subset(news, data_channel_is_lifestyle == 1)
+
+#Select variables for modeling and EDA
+subnews <- subnews%>% select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares)
+subnews$is_weekend <- as.factor(subnews$is_weekend)
+```
+ 
+# Data Split  
+In this part, our data set is split into training set and test set, with training set contains 70% of the data and test set contains the other 30%.  
+```{r}
+#Set seed for reproduction
+set.seed(123)
+
+#Split data
+index <- createDataPartition(subnews$shares,p = 0.7,list = FALSE)
+train <- subnews[index,]
+test <- subnews[-index,]
+
+
+```
+
+
+# Summarizations and EDA  
+
+In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, boxplots, frequency tables are generated to examine the relationship between the variables.  
+```{r}
+#Summary statistics
 
 
