@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Package List  
 Below is the package list needed for this project.
-```{r}
+```{r， warning = FALSE, message=FALSE}
 library(readr)
 library(tidyverse)
 library(caret)
@@ -20,14 +20,14 @@ library(ggplot2)
 
 # Introduction  
 The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. The lifestyle channel is first chosen for analysis.  
-For our project, we will take variables(With description of each variable):
-+ n_tokens_title: Number of words in the title  
-+ n_tokens_content: Number of words in the content  
-+ num_imgs: Number of images  
-+ average_token_length: Average length of the words in the content  
-+ is_weekend: Was the article published on the weekend?  
-+ global_rate_positive_words: Rate of positive words in the content  
-+ num_keywords: Number of keywords in the metadata  
+For our project, we will take variables(With description of each variable):  
++ `n_tokens_title`: Number of words in the title  
++ `n_tokens_content`: Number of words in the content  
++ `num_imgs`: Number of images  
++ `average_token_length`: Average length of the words in the content  
++ `is_weekend`: Was the article published on the weekend?  
++ `global_rate_positive_words`: Rate of positive words in the content  
++ `num_keywords`: Number of keywords in the metadata  
 
 The response variable that we are interested in is the `shares` variable, which stands for the number of sales in social network. A basic EDA will be performed at first to examine the relationship between covariates and `shares`. Then predicted modeling is applied to predict the number of sales, which will be illustrated in detail below.  
 
