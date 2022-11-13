@@ -12,10 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Package List  
 Below is the package list needed for this project.
 ```{r， warning = FALSE, message=FALSE}
-library(readr)
 library(tidyverse)
 library(caret)
-library(ggplot2)  
+library(MASS)
+library(randomForest)
 ```
 
 # Introduction  
@@ -34,13 +34,13 @@ The response variable that we are interested in is the `shares` variable, which 
 # Data read in
 ```{r}
 #Read in data
-news <- read_csv("OnlineNewsPopularity.csv",show_col_types = FALSE)
+news <- read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
 
 #Subset data with a single data channel
 subnews <- subset(news, data_channel_is_lifestyle == 1)
 
 #Select variables for modeling and EDA
-subnews <- subnews%>% select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares,num_keywords)
+subnews <- subnews %>% dplyr::select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares,num_keywords)
 subnews$is_weekend <- as.factor(subnews$is_weekend)
 ```
  
@@ -60,7 +60,7 @@ test <- subnews[-index,]
 
 # Summarizations and EDA  
 
-In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, boxplots, frequency tables are generated to examine the relationship between the variables.  
+In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, and boxplots, as well as frequency tables are generated to examine the relationship between the variables.  
 ```{r}
 #Define function for producing summary statistics
 sum <- function(x){
@@ -75,12 +75,21 @@ sum <- function(x){
 #Calculate summary statistic for variables
 sum(subnews$n_tokens_title)
 sum(subnews$n_tokens_content)
-
 ```
+
+We also show correlations between our selected variables. We show both a correlation matrix and correlation plot.
+```{r}
+#correlation matrix
+(corrs <- cor(subnews[,-5]))
+
+#correlation plot
+corrplot::corrplot(corrs)
+```
+Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`.
 
 After producing summary statistics, some plots and tables are shown below:  
 
-## Frequency table  
+## Frequency tables  
 
 Below shows the frequency table of number of keywords.  
 ```{r}
@@ -88,6 +97,12 @@ Below shows the frequency table of number of keywords.
 ```
 
 According to the table, most of the articles have more than 5 keywords. We assume that more keywords in the metadata will increase shares.  
+
+Here we have a frequency table of number of articles published on a weekend.
+```{r}
+table(subnews$is_weekend)
+```
+According to this table, we see that approximately one fifth of the articles in our data are published on the weekend.
 
 ## Scatter plots
 
@@ -133,10 +148,11 @@ A jitter plot is generated to see the spread of shares data in weekdays and week
 
 # Model fitting  
 
-Below is the model fitting part. In this part, 4 models are fitted. They are: linear regression model, random forest model and boosted tree model.
+Below is the model fitting part. In this part, four models are fitted. They are: linear regression model, random forest model and boosted tree model.
 
 ## Linear Regression  
-
+We fit two different linear regression models here. Linear regression is a basic method to find a linear relationship between a response variable and one or more predictor variables. Here we will fit models using a forward selection of the predictor variables as well as a subset selection of variables and interaction terms.  
+First we fit the forward selection.
 ```{r}
 #Use forward selection to determine the predictors used for the model
 lm_forward <- train(shares~ .,
@@ -155,12 +171,54 @@ lmod1_RMSE <- RMSE(lmod_pred,test$shares)
 lmod1_RMSE
 ```
 
+Now we fit the subset selection.
+```{r}
+#Fit linear model using subset method
+lm_subset <- train(shares~.^2,
+                   data = train,
+                   method = "lmStepAIC",
+                   trControl = trainControl("cv",number=5),
+                   trace = FALSE)
+lm_subset$finalModel
+lm_subset$results
+
+#fit with test data
+lsub_pred <- predict(lm_subset, newdata = test)
+
+#test error:
+(lmod2_RMSE <- RMSE(lsub_pred,test$shares))
+```
+
 
 ## Random Forest Model  
 
+Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions.
+
+```{r}
+#set tuning parameters
+rand_grid <- data.frame(mtry=1:5)
+
+#train model
+rand_fit <- train(shares~.,
+                  data = train,
+                  method = "rf",
+                  preProcess = c("center", "scale"),
+                  trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3),
+                  tuneGrid = rand_grid)
+rand_fit$bestTune
+rand_fit$finalModel
+
+#fit with test data
+rand_pred <- predict(rand_fit, newdata = test)
+
+#test error:
+(rand_RMSE <- RMSE(rand_pred, test$shares))
+```
+
+
 ## Boosted Tree Model  
 
-Below is the process of fitting a boosted tree model, also model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, I use the 
+Below is the process of fitting a boosted tree model. Model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, I use the
 
 ```{r}
 #Set tuning grid for boosted tree model
