@@ -6,11 +6,17 @@ Katelyn Settlemyre, Xi Zeng
 # Package List
 
 Below is the package list needed for this project.
-`{r， warning = FALSE, message=FALSE} library(tidyverse) library(caret) library(MASS) library(randomForest)`
+
+``` r
+library(tidyverse)
+library(caret)
+library(MASS)
+library(randomForest)
+```
 
 # Introduction
 
-The data set used for analysis is the `OnlineNewsPopularity` data set
+The data set used for analysis is the `OnlineNewsPopularity` sudata set
 from UCI Machine Learning Repository. The data set has 61 variables in
 total, as well as 39644 observations. First, we will take a subset data
 set by filter according to the data channel. The lifestyle channel is
@@ -35,7 +41,7 @@ the number of sales, which will be illustrated in detail below.
 
 ``` r
 #Read in data
-news <- read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
+news <- readr::read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
 
 #Subset data with a single data channel
 subnews <- subset(news, data_channel_is_lifestyle == 1)
@@ -147,8 +153,9 @@ correlation matrix and correlation plot.
 corrplot::corrplot(corrs)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- --> Our
-correlation matrix and plot shows that we don’t have strong
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+Our correlation matrix and plot shows that we don’t have strong
 relationships between variables. The strongest relationship is a
 correlation of 0.46 between `n_tokens_content` and `num_imgs`.
 
@@ -197,31 +204,52 @@ geom_point(aes(color = is_weekend)) +
   scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 According to the scatter plot above, it seems that when the rate of
 positive words exceeds 0.075, the number of shares of the article is
 relatively small. Also, those articles with high shares are mostly
 published during weekdays rather than weekend.
 
+``` r
+ggplot(data = train, aes(x= n_tokens_content,y = shares)) + 
+  geom_point() + 
+  labs(x = "Number of Words",
+       y = "Number of Shares",
+       title = "Scatter Plot of Shares vs Number of Words in the Content")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- --> The above
+plot suggests articles with 2000 or fewer words are more likely to be
+shared than articles with more than 2000 words.
+
 ## Barplots
 
-Below are the bar plot for the number of keywords：
+Below is the bar plot for the number of keywords：
 
 ``` r
 # Create bar plot of predictor "is_weekend"
 g <- ggplot(data = train, aes(x = num_keywords, fill= is_weekend))
-g + geom_bar(aes(fill= is_weekend),position = "dodge") +
+g + geom_bar(aes(fill = is_weekend),position = "dodge") +
   xlab("Number of keywords")+
-  ggtitle("Bar Plot of number of keyword")+
+  ggtitle("Bar Plot of Nmber of Keywords")+
   scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 According to the bar plot, the frequency count of the each number of
 keywords is shown, also ,it will be group into weekday and weekend to
 see if there is any difference between them.
+
+``` r
+ggplot(data = train, aes(x= n_tokens_title)) + 
+  geom_bar() + labs(x="Words in Title", title = "Bar Plot of Number of Words in Title")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- --> This bar
+plot shows counts of articles by number of words in the title. Most of
+our articles have between 8 and 11 words in the title.
 
 ## Boxplots
 
@@ -234,16 +262,41 @@ g + geom_point(aes(color = is_weekend), position = "jitter")+
   scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 A jitter plot is generated to see the spread of shares data in weekdays
 and weekends.
+
+Here, we show boxplots for number of words in the article by weekend and
+number of keywords by weekend.
+
+``` r
+ggplot(data=train, aes(x=n_tokens_content)) +
+  geom_boxplot(aes(fill=is_weekend)) +
+  labs(x = "Number of Words in Content")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+This pair of plots suggests there’s not much difference between weekends
+and weekdays for number of words in a given article.
+
+``` r
+ggplot(data=train, aes(x=num_keywords)) +
+  geom_boxplot(aes(fill=is_weekend)) +
+  labs(x = "Number of Keywords")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- --> This pair of
+plots suggests that articles published on the weekend use more keywords
+than those published on a weekday.
 
 # Model fitting
 
 Below is the model fitting part. In this part, four models are fitted.
 They are: linear regression model, random forest model and boosted tree
-model.
+model. For testing goodness of fit, we will be using the root mean
+squared error (RMSE).
 
 ## Linear Regression
 
@@ -338,7 +391,9 @@ lsub_pred <- predict(lm_subset, newdata = test)
 Here we fit a random forest model. A random forest is an method where
 multiple tree models are fit from bootstrap samples using a subset of
 predictor variables for each bootstrap sample. The final prediction is
-an average of the bootstrap predictions.
+an average of the bootstrap predictions. We use the tuning parameter
+`mtry`, the number of randomly selected predictors, using values 1
+through 5 to see fit the best tune.
 
 ``` r
 #set tuning parameters
@@ -383,9 +438,18 @@ rand_pred <- predict(rand_fit, newdata = test)
 
 ## Boosted Tree Model
 
-Below is the process of fitting a boosted tree model. Model performance
-is tested by fitting the final tuned model on test set and calculate the
-test RMSE. Here, I use the
+Below is the process of fitting a boosted tree model. A boosted tree is
+a method that builds sequentially. It’s a slow-building method, that
+builds a new tree considering the error of the previous fit, updating
+predictions each new fit. Model performance is tested by fitting the
+final tuned model on test set and calculate the test RMSE. Here, I use
+combinations the following tuning parameters:  
++ `n.trees`, the number of boosting iterations, with values 25, 50, 100,
+150, and 200  
++ `interaction.depth`, the maximum tree depth, with values 1 through 5  
++ `shrinkage`, the learning rate of the model, with values 0.1, 0.2,
+0.3, 0.4, and 0.5, and  
++ `n.minobsinnode`, the minimum node size, here using 10.
 
 ``` r
 #Set tuning grid for boosted tree model
@@ -548,3 +612,29 @@ boost_RMSE
 ```
 
     ## [1] 9092.104
+
+# Comparison
+
+Though the RMSE for the testing data has been given for each model in
+the previous section, we shall display them here and compare the models’
+performances.
+
+``` r
+data.frame(Model = c("Linear Regression, forward", "Linear Regression, subset", "Random Forest", "Boosted Tree"), 
+           RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE))
+```
+
+    ##                        Model     RMSE
+    ## 1 Linear Regression, forward 9078.315
+    ## 2  Linear Regression, subset 9072.598
+    ## 3              Random Forest 9074.526
+    ## 4               Boosted Tree 9092.104
+
+We want the model with the lowest RMSE. Comparing models, it seems that
+the linear regression model with the interaction terms has the lowest
+RMSE, followed by the random forest model, the linear regression model
+with only first order terms, and lastly the boosted tree. In this case
+we would want to choose the linear regression model with the interaction
+terms for prediction.
+
+# Automation
