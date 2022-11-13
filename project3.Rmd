@@ -11,7 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Package List  
 Below is the package list needed for this project.
-```{r， warning = FALSE, message=FALSE}
+
+```{r, warning = FALSE, message=FALSE}
 library(tidyverse)
 library(caret)
 library(MASS)
@@ -19,7 +20,7 @@ library(randomForest)
 ```
 
 # Introduction  
-The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. The lifestyle channel is first chosen for analysis.  
+The data set used for analysis is the `OnlineNewsPopularity` sudata set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. The lifestyle channel is first chosen for analysis.  
 For our project, we will take variables(With description of each variable):  
 + `n_tokens_title`: Number of words in the title  
 + `n_tokens_content`: Number of words in the content  
@@ -34,7 +35,7 @@ The response variable that we are interested in is the `shares` variable, which 
 # Data read in
 ```{r}
 #Read in data
-news <- read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
+news <- readr::read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
 
 #Subset data with a single data channel
 subnews <- subset(news, data_channel_is_lifestyle == 1)
@@ -85,6 +86,7 @@ We also show correlations between our selected variables. We show both a correla
 #correlation plot
 corrplot::corrplot(corrs)
 ```
+
 Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`.
 
 After producing summary statistics, some plots and tables are shown below:  
@@ -118,20 +120,36 @@ geom_point(aes(color = is_weekend)) +
 
 According to the scatter plot above, it seems that when the rate of positive words exceeds 0.075, the number of shares of the article is relatively small. Also, those articles with high shares are mostly published during weekdays rather than weekend.  
 
+```{r}
+ggplot(data = train, aes(x= n_tokens_content,y = shares)) + 
+  geom_point() + 
+  labs(x = "Number of Words",
+       y = "Number of Shares",
+       title = "Scatter Plot of Shares vs Number of Words in the Content")
+```
+The above plot suggests articles with 2000 or fewer words are more likely to be shared than articles with more than 2000 words.
+
 ## Barplots
 
-Below are the bar plot for the number of keywords：  
+Below is the bar plot for the number of keywords：  
 
 ```{r}
 # Create bar plot of predictor "is_weekend"
 g <- ggplot(data = train, aes(x = num_keywords, fill= is_weekend))
-g + geom_bar(aes(fill= is_weekend),position = "dodge") +
+g + geom_bar(aes(fill = is_weekend),position = "dodge") +
   xlab("Number of keywords")+
-  ggtitle("Bar Plot of number of keyword")+
+  ggtitle("Bar Plot of Nmber of Keywords")+
   scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
 According to the bar plot, the frequency count of the each number of keywords is shown, also ,it will be group into weekday and weekend to see if there is any difference between them.  
+
+```{r}
+ggplot(data = train, aes(x= n_tokens_title)) + 
+  geom_bar() + labs(x="Words in Title", title = "Bar Plot of Number of Words in Title")
+  
+```
+This bar plot shows counts of articles by number of words in the title. Most of our articles have between 8 and 11 words in the title.
 
 ## Boxplots  
 
@@ -146,9 +164,26 @@ g + geom_point(aes(color = is_weekend), position = "jitter")+
 
 A jitter plot is generated to see the spread of shares data in weekdays and weekends.  
 
+Here, we show boxplots for number of words in the article by weekend and number of keywords by weekend.
+```{r}
+ggplot(data=train, aes(x=n_tokens_content)) +
+  geom_boxplot(aes(fill=is_weekend)) +
+  labs(x = "Number of Words in Content")
+```
+
+This pair of plots suggests there's not much difference between weekends and weekdays for number of words in a given article.
+
+```{r}
+ggplot(data=train, aes(x=num_keywords)) +
+  geom_boxplot(aes(fill=is_weekend)) +
+  labs(x = "Number of Keywords")
+```
+This pair of plots suggests that articles published on the weekend use more keywords than those published on a weekday.
+
+
 # Model fitting  
 
-Below is the model fitting part. In this part, four models are fitted. They are: linear regression model, random forest model and boosted tree model.
+Below is the model fitting part. In this part, four models are fitted. They are: linear regression model, random forest model and boosted tree model. For testing goodness of fit, we will be using the root mean squared error (RMSE).
 
 ## Linear Regression  
 We fit two different linear regression models here. Linear regression is a basic method to find a linear relationship between a response variable and one or more predictor variables. Here we will fit models using a forward selection of the predictor variables as well as a subset selection of variables and interaction terms.  
@@ -192,8 +227,7 @@ lsub_pred <- predict(lm_subset, newdata = test)
 
 ## Random Forest Model  
 
-Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions.
-
+Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 5 to see fit the best tune.
 ```{r}
 #set tuning parameters
 rand_grid <- data.frame(mtry=1:5)
@@ -218,7 +252,11 @@ rand_pred <- predict(rand_fit, newdata = test)
 
 ## Boosted Tree Model  
 
-Below is the process of fitting a boosted tree model. Model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, I use the
+Below is the process of fitting a boosted tree model. A boosted tree is a method that builds sequentially. It's a slow-building method, that builds a new tree considering the error of the previous fit, updating predictions each new fit. Model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, I use combinations the following tuning parameters:  
++ `n.trees`, the number of boosting iterations, with values 25, 50, 100, 150, and 200  
++ `interaction.depth`, the maximum tree depth, with values 1 through 5  
++ `shrinkage`, the learning rate of the model, with values 0.1, 0.2, 0.3, 0.4, and 0.5, and  
++ `n.minobsinnode`, the minimum node size, here using 10.
 
 ```{r}
 #Set tuning grid for boosted tree model
@@ -245,3 +283,17 @@ boost_pred <- predict(boost_fit, newdata = test)
 boost_RMSE <- RMSE(boost_pred,test$shares)
 boost_RMSE
 ```
+
+
+# Comparison
+Though the RMSE for the testing data has been given for each model in the previous section, we shall display them here and compare the models' performances.
+
+```{r}
+data.frame(Model = c("Linear Regression, forward", "Linear Regression, subset", "Random Forest", "Boosted Tree"), 
+           RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE))
+```
+We want the model with the lowest RMSE. Comparing models, it seems that the linear regression model with the interaction terms has the lowest RMSE, followed by the random forest model, the linear regression model with only first order terms, and lastly the boosted tree. In this case we would want to choose the linear regression model with the interaction terms for prediction.
+
+# Automation
+
+
