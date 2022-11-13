@@ -6,13 +6,7 @@ Katelyn Settlemyre, Xi Zeng
 # Package List
 
 Below is the package list needed for this project.
-
-``` r
-library(tidyverse)
-library(caret)
-library(MASS)
-library(randomForest)
-```
+`{r， warning = FALSE, message=FALSE} library(tidyverse) library(caret) library(MASS) library(randomForest)`
 
 # Introduction
 
@@ -153,7 +147,7 @@ correlation matrix and correlation plot.
 corrplot::corrplot(corrs)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- --> Our
+![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- --> Our
 correlation matrix and plot shows that we don’t have strong
 relationships between variables. The strongest relationship is a
 correlation of 0.46 between `n_tokens_content` and `num_imgs`.
@@ -203,7 +197,7 @@ geom_point(aes(color = is_weekend)) +
   scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 According to the scatter plot above, it seems that when the rate of
 positive words exceeds 0.075, the number of shares of the article is
@@ -223,7 +217,7 @@ g + geom_bar(aes(fill= is_weekend),position = "dodge") +
   scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 According to the bar plot, the frequency count of the each number of
 keywords is shown, also ,it will be group into weekday and weekend to
@@ -240,7 +234,7 @@ g + geom_point(aes(color = is_weekend), position = "jitter")+
   scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 A jitter plot is generated to see the spread of shares data in weekdays
 and weekends.
