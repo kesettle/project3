@@ -20,7 +20,7 @@ library(randomForest)
 ```
 
 # Introduction  
-The data set used for analysis is the `OnlineNewsPopularity` sudata set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. The lifestyle channel is first chosen for analysis.  
+The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. There are 6 data channels,which are `lifestyle`, `entertainment`, `bus`, `socmed`,`tech`, `world`, .The lifestyle channel is first chosen for analysis.  
 For our project, we will take variables(With description of each variable):  
 + `n_tokens_title`: Number of words in the title  
 + `n_tokens_content`: Number of words in the content  
@@ -38,7 +38,7 @@ The response variable that we are interested in is the `shares` variable, which 
 news <- readr::read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
 
 #Subset data with a single data channel
-subnews <- subset(news, data_channel_is_lifestyle == 1)
+subnews <- subset(news, params$Channels == 1)
 
 #Select variables for modeling and EDA
 subnews <- subnews %>% dplyr::select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares,num_keywords)
@@ -294,6 +294,28 @@ data.frame(Model = c("Linear Regression, forward", "Linear Regression, subset", 
 ```
 We want the model with the lowest RMSE. Comparing models, it seems that the linear regression model with the interaction terms has the lowest RMSE, followed by the random forest model, the linear regression model with only first order terms, and lastly the boosted tree. In this case we would want to choose the linear regression model with the interaction terms for prediction.
 
+# Automation  
+Below is the part for automating the output:  
+```{r}
+channels <- c("data_channel_is_lifestyle", "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world")
+# Create file names
+name <- c("Lifestyle", "Entertainment", "Business", "SocialMedia",
+          "Tech", "World")
+output_file <- paste0(name, "Analysis.md")
+# Create a list for each channel with just channel name parameter
+params <- lapply(channels, FUN = function(x){
+  list(Channels = x)
+})
+# Put into a data frame
+reports <- tibble::tibble(output_file, params)
 # Automation
+apply(reports, MARGIN = 1, FUN = function(x) {
+  rmarkdown::render(input = "project3.Rmd", 
+                    output_format = "github_document", 
+                    output_file = x[[1]], 
+                    params = x[[2]], 
+                    output_options = list(html_preview = FALSE)) 
+})
+```
 
 
