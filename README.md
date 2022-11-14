@@ -639,9 +639,9 @@ terms for prediction.
 
 # Automation
 We automate the above process for each channel. Below we list the link to each channel. Note we link to the html file even though the file we create is a .md file:  
-+ [Lifestyle]{LifestyleAnalysis.html}  
-+ [Entertainment]{EntertainmentAnalysis.html}  
-+ [Business]{BusinessAnalysis.html}  
-+ [Social Media]{SocialMediaAnalysis.html}  
-+ [Tech]{TechAnalysis.html}  
-+ [World]{WorldAnalysis.html}
++ [Lifestyle](LifestyleAnalysis.html)  
++ [Entertainment](EntertainmentAnalysis.html)  
++ [Business](BusinessAnalysis.html)  
++ [Social Media](SocialMediaAnalysis.html)  
++ [Tech](TechAnalysis.html)  
++ [World](WorldAnalysis.html)
