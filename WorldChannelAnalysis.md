@@ -135,14 +135,22 @@ correlation matrix and correlation plot.
 (corrs <- cor(subnews[,-5]))
 ```
 
-    ##                            n_tokens_title n_tokens_content    num_imgs average_token_length global_rate_positive_words      shares num_keywords
-    ## n_tokens_title                 1.00000000       0.05324518 -0.00813796          -0.03173449                -0.05310114  0.04212992   0.02249055
-    ## n_tokens_content               0.05324518       1.00000000  0.24321580           0.23383215                 0.13704763 -0.02011013   0.09666407
-    ## num_imgs                      -0.00813796       0.24321580  1.00000000          -0.22574757                -0.12834892  0.08035302   0.06767059
-    ## average_token_length          -0.03173449       0.23383215 -0.22574757           1.00000000                 0.33397805 -0.06051878  -0.03178221
-    ## global_rate_positive_words    -0.05310114       0.13704763 -0.12834892           0.33397805                 1.00000000  0.02152962   0.12906241
-    ## shares                         0.04212992      -0.02011013  0.08035302          -0.06051878                 0.02152962  1.00000000   0.03125003
-    ## num_keywords                   0.02249055       0.09666407  0.06767059          -0.03178221                 0.12906241  0.03125003   1.00000000
+    ##                            n_tokens_title n_tokens_content    num_imgs average_token_length
+    ## n_tokens_title                 1.00000000       0.05324518 -0.00813796          -0.03173449
+    ## n_tokens_content               0.05324518       1.00000000  0.24321580           0.23383215
+    ## num_imgs                      -0.00813796       0.24321580  1.00000000          -0.22574757
+    ## average_token_length          -0.03173449       0.23383215 -0.22574757           1.00000000
+    ## global_rate_positive_words    -0.05310114       0.13704763 -0.12834892           0.33397805
+    ## shares                         0.04212992      -0.02011013  0.08035302          -0.06051878
+    ## num_keywords                   0.02249055       0.09666407  0.06767059          -0.03178221
+    ##                            global_rate_positive_words      shares num_keywords
+    ## n_tokens_title                            -0.05310114  0.04212992   0.02249055
+    ## n_tokens_content                           0.13704763 -0.02011013   0.09666407
+    ## num_imgs                                  -0.12834892  0.08035302   0.06767059
+    ## average_token_length                       0.33397805 -0.06051878  -0.03178221
+    ## global_rate_positive_words                 1.00000000  0.02152962   0.12906241
+    ## shares                                     0.02152962  1.00000000   0.03125003
+    ## num_keywords                               0.12906241  0.03125003   1.00000000
 
 ``` r
 #correlation plot
@@ -217,8 +225,12 @@ ggplot(data = train, aes(x= n_tokens_content,y = shares)) +
 ```
 
 ![](WorldChannelAnalysis_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
-The above plot suggests articles with 2000 or fewer words are more
-likely to be shared than articles with more than 2000 words.
+The above plot will show the scatter plot between the number of shares
+and rate of positive words in the content. Also, the point is colored by
+if the article is published on weekend. There may be difference between
+the publish date or there may be curvature or linear relationship
+between number of shares and rate of positive words in the content，
+depending on how the scatter plot looks like.
 
 ## Barplots
 
@@ -245,8 +257,9 @@ ggplot(data = train, aes(x= n_tokens_title)) +
 ```
 
 ![](WorldChannelAnalysis_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
-This bar plot shows counts of articles by number of words in the title.
-Most of our articles have between 8 and 11 words in the title.
+
+This bar plot shows counts of articles by number of words in the title
+for each channel.
 
 ## Boxplots
 
@@ -262,7 +275,8 @@ g + geom_point(aes(color = is_weekend), position = "jitter")+
 ![](WorldChannelAnalysis_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 A jitter plot is generated to see the spread of shares data in weekdays
-and weekends.
+and weekends for each channel to see if publish data has an effect on
+the shares.
 
 Here, we show boxplots for number of words in the article by weekend and
 number of keywords by weekend.
@@ -270,23 +284,28 @@ number of keywords by weekend.
 ``` r
 ggplot(data=train, aes(x=n_tokens_content)) +
   geom_boxplot(aes(fill=is_weekend)) +
-  labs(x = "Number of Words in Content")
+  labs(x = "Number of Words in Content")+
+  ggtitle("Boxplot for number of words in content on weekday/weekend")+
+  scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
 ![](WorldChannelAnalysis_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
-This pair of plots suggests there’s not much difference between weekends
-and weekdays for number of words in a given article.
+This pair of plots would suggest if there’s difference between weekends
+and weekdays for number of wordsin content in a given article.
 
 ``` r
 ggplot(data=train, aes(x=num_keywords)) +
   geom_boxplot(aes(fill=is_weekend)) +
-  labs(x = "Number of Keywords")
+  labs(x = "Number of Keywords") +
+  ggtitle("Boxplot for number of keywords on weekday/weekend")+
+  scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
 ![](WorldChannelAnalysis_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-This pair of plots suggests that articles published on the weekend use
-more keywords than those published on a weekday.
+
+This pair of plots will suggests if articles published on the weekend
+use the same number of keywords than those published on a weekday.
 
 # Model fitting
 
@@ -299,64 +318,44 @@ squared error (RMSE).
 
 We fit two different linear regression models here. Linear regression is
 a basic method to find a linear relationship between a response variable
-and one or more predictor variables. Here we will fit models using a
-forward selection of the predictor variables as well as a subset
-selection of variables and interaction terms.  
+and one or more predictor variables. Here we will fit models using only
+the main effect of predictor variables as well as adding interaction
+terms of the linear models.  
 First we fit the forward selection.
 
 ``` r
-#Use forward selection to determine the predictors used for the model
-lmod_1 <- train(shares~ + n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
+#Use predictors used for the model
+lmod_1 <- train(shares~  n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                     data = train,
                     method = "lm",
-                    trControl = trainControl("cv",number=10),
-                    trace = FALSE)
-```
+                    trControl = trainControl("cv",number=10))
 
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-    ## Warning: In lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) :
-    ##  extra argument 'trace' will be disregarded
-
-``` r
-lmod_1$finalModel
+summary(lmod_1)
 ```
 
     ## 
     ## Call:
-    ## lm(formula = .outcome ~ ., data = dat, trace = FALSE)
+    ## lm(formula = .outcome ~ ., data = dat)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ##  -4645  -1460   -980   -269 281732 
     ## 
     ## Coefficients:
-    ##                (Intercept)              n_tokens_title            n_tokens_content        average_token_length                 is_weekend1  global_rate_positive_words                num_keywords  
-    ##                   2705.310                     112.619                      -0.157                    -579.030                     625.947                   19106.282                      72.375
+    ##                             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)                 2705.310    708.742   3.817 0.000136 ***
+    ## n_tokens_title               112.619     40.115   2.807 0.005011 ** 
+    ## n_tokens_content              -0.157      0.206  -0.762 0.445878    
+    ## average_token_length        -579.030    103.164  -5.613 2.08e-08 ***
+    ## is_weekend1                  625.947    250.871   2.495 0.012620 *  
+    ## global_rate_positive_words 19106.282   6306.457   3.030 0.002459 ** 
+    ## num_keywords                  72.375     44.907   1.612 0.107088    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 6408 on 5893 degrees of freedom
+    ## Multiple R-squared:  0.009477,   Adjusted R-squared:  0.008468 
+    ## F-statistic: 9.397 on 6 and 5893 DF,  p-value: 2.739e-10
 
 ``` r
 #Fit model with selected variables on test data
@@ -369,24 +368,54 @@ lmod1_RMSE
 
     ## [1] 5181.112
 
-Now we fit the subset selection.
+Now we fit the linear model with polynomial term.Since in EDA, there
+seem to be a curvature relationship between `global_rate_positive_words`
+and `shares`, thus, a polynomial term is added here. .
 
 ``` r
-#Fit linear model using subset method
-lm_subset <- train(shares~.^2,
-                   data = train,
-                   method = "lmStepAIC",
-                   trControl = trainControl("cv",number=5),
-                   trace = FALSE)
-lm_subset$finalModel
-lm_subset$results
+#Fit linear model using different predictors with interaction term
+lmod2 <- train(shares~ n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords + I(global_rate_positive_words^2),
+               data = train,
+               method = "lm",
+               trControl = trainControl("cv",number= 10))
 
+summary(lmod2)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = .outcome ~ ., data = dat)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ##  -4603  -1492   -978   -251 281627 
+    ## 
+    ## Coefficients:
+    ##                                     Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)                        2.717e+03  7.087e+02   3.834 0.000128 ***
+    ## n_tokens_title                     1.113e+02  4.012e+01   2.774 0.005553 ** 
+    ## n_tokens_content                  -2.062e-01  2.080e-01  -0.991 0.321575    
+    ## average_token_length              -6.792e+02  1.191e+02  -5.703 1.23e-08 ***
+    ## is_weekend1                        6.412e+02  2.510e+02   2.555 0.010657 *  
+    ## global_rate_positive_words         5.431e+04  2.185e+04   2.485 0.012965 *  
+    ## num_keywords                       6.710e+01  4.501e+01   1.491 0.136043    
+    ## `I(global_rate_positive_words^2)` -4.771e+05  2.836e+05  -1.683 0.092498 .  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 6407 on 5892 degrees of freedom
+    ## Multiple R-squared:  0.009952,   Adjusted R-squared:  0.008776 
+    ## F-statistic: 8.461 on 7 and 5892 DF,  p-value: 2.437e-10
+
+``` r
 #fit with test data
-lsub_pred <- predict(lm_subset, newdata = test)
+lmod2_pred <- predict(lmod2, newdata = test)
 
 #test error:
-(lmod2_RMSE <- RMSE(lsub_pred,test$shares))
+(lmod2_RMSE <- RMSE(lmod2_pred,test$shares))
 ```
+
+    ## [1] 5179.886
 
 ## Random Forest Model
 
@@ -395,14 +424,14 @@ multiple tree models are fit from bootstrap samples using a subset of
 predictor variables for each bootstrap sample. The final prediction is
 an average of the bootstrap predictions. We use the tuning parameter
 `mtry`, the number of randomly selected predictors, using values 1
-through 5 to see fit the best tune.
+through 3 to see fit the best tune.
 
 ``` r
 #set tuning parameters
-rand_grid <- data.frame(mtry=1:5)
+rand_grid <- data.frame(mtry=1:3)
 
 #train model
-rand_fit <- train(shares~.,
+rand_fit <- train(shares~n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                   data = train,
                   method = "rf",
                   preProcess = c("center", "scale"),
@@ -410,13 +439,27 @@ rand_fit <- train(shares~.,
                   tuneGrid = rand_grid)
 rand_fit$bestTune
 rand_fit$finalModel
+```
 
+    ## 
+    ## Call:
+    ##  randomForest(x = x, y = y, mtry = param$mtry) 
+    ##                Type of random forest: regression
+    ##                      Number of trees: 500
+    ## No. of variables tried at each split: 1
+    ## 
+    ##           Mean of squared residuals: 41219859
+    ##                     % Var explained: 0.46
+
+``` r
 #fit with test data
 rand_pred <- predict(rand_fit, newdata = test)
 
 #test error:
 (rand_RMSE <- RMSE(rand_pred, test$shares))
 ```
+
+    ## [1] 5171.654
 
 ## Boosted Tree Model
 
@@ -442,7 +485,8 @@ boost_grid <- expand.grid(n.trees = c(25,50,100,150,200),
 boost_grid
 
 #Train the model
-boost_fit <- train(shares ~., data = train,
+boost_fit <- train(shares ~n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
+                   data = train,
                    method = "gbm",
                    trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3),
                    preProcess = c("center", "scale"),
@@ -459,6 +503,8 @@ boost_RMSE <- RMSE(boost_pred,test$shares)
 boost_RMSE
 ```
 
+    ## [1] 5183.61
+
 # Comparison
 
 Though the RMSE for the testing data has been given for each model in
@@ -470,12 +516,6 @@ data.frame(Model = c("Linear Regression, forward", "Linear Regression, subset", 
            RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE))
 ```
 
-    ##                        Model     RMSE
-    ## 1 Linear Regression, forward 5181.112
-    ## 2  Linear Regression, subset 9090.454
-    ## 3              Random Forest 9088.624
-    ## 4               Boosted Tree 9090.398
-
 We want the model with the lowest RMSE. Comparing models, it seems that
 the linear regression model with the interaction terms has the lowest
 RMSE, followed by the random forest model, the linear regression model
@@ -485,5 +525,27 @@ terms for prediction.
 
 # Automation
 
-Below is the part for automating the output:  
-`{r， eval = FALSE, echo=TRUE} channels <- c("data_channel_is_lifestyle", "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world") # Create file names name <- c("Lifestyle", "Entertainment", "Business", "SocialMedia",           "Tech", "World") output_file <- paste0(name, "Analysis.md") # Create a list for each channel with just channel name parameter parameters = lapply(channels, FUN = function(x){   list(Channels = x) }) # Put into a data frame reports <- tibble::tibble(output_file, parameters) options(knitr.duplicate.label = "allow") # Automation apply(reports, MARGIN = 1, FUN = function(x) {   rmarkdown::render(input = "project3.Rmd",                      output_format = "github_document",                      output_file = x[[1]],                      params = x[[2]],                      output_options = list(html_preview = FALSE))  })`
+Below is the part for automating the output:
+
+``` r
+channels <- c("data_channel_is_lifestyle", "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world")
+# Create file names
+name <- c("Lifestyle", "Entertainment", "Business", "SocialMedia",
+          "Technology", "World")
+output_file <- paste0(name, "ChannelAnalysis.md")
+# Create a list for each channel with just channel name parameter
+parameters = lapply(channels, FUN = function(x){
+  list(Channels = x)
+})
+# Put into a data frame
+reports <- tibble::tibble(output_file, parameters)
+#options(knitr.duplicate.label = "allow")
+# Automation
+apply(reports, MARGIN = 1, FUN = function(x) {
+  rmarkdown::render(input = "project3.Rmd", 
+                    output_format = "github_document", 
+                    output_file = x[[1]], 
+                    params = x[[2]], 
+                    output_options = list(html_preview = FALSE)) 
+})
+```
