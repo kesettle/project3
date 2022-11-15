@@ -49,7 +49,7 @@ subnews$is_weekend <- as.factor(subnews$is_weekend)
 ```
  
 # Data Split  
-In this part, our data set is split into training set and test set, with training set contains 70% of the data and test set contains the other 30%.  
+In this part, our data set is split into a training set and a test set, with training set contains 70% of the data and the test set contains the other 30%.  
 ```{r}
 #Set seed for reproduction
 set.seed(123)
@@ -90,7 +90,7 @@ We also show correlations between our selected variables. We show both a correla
 corrplot::corrplot(corrs)
 ```
 
-Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`. Thus, we consider remove `num_imgs` in our model fitting to avoid collinearity.  
+Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`. Thus, we consider removing `num_imgs` in our model fitting to avoid collinearity.  
 
 After producing summary statistics, some plots and tables are shown below:  
 
@@ -101,7 +101,7 @@ Below shows the frequency table of number of keywords.
  table(train$num_keywords)
 ```
 
-According to the table,  we will see the frequency count of the number of key words in each channel.  
+According to the table, we will see the frequency count of the number of key words in each channel.  
 
 Here we have a frequency table of number of articles published on a weekend or not.  
 ```{r}
@@ -130,6 +130,7 @@ ggplot(data = train, aes(x= n_tokens_content,y = shares)) +
        y = "Number of Shares",
        title = "Scatter Plot of Shares vs Number of Words in the Content")
 ```
+
 The above plot will show the scatter plot between the number of shares and rate of positive words in the content. Also, the point is colored by if the article is published on weekend. There may be difference between the publish date or there may be curvature or linear relationship between number of shares and rate of positive words in the content， depending on how the scatter plot looks like.  
 
 ## Barplots
@@ -156,7 +157,7 @@ ggplot(data = train, aes(x= n_tokens_title)) +
 
 This bar plot shows counts of articles by number of words in the title for each channel.  
 
-## Boxplots  
+## Boxplots and Jitter Plots 
 
 Below are the box plot for sales:  
 
@@ -178,7 +179,7 @@ ggplot(data=train, aes(x=n_tokens_content)) +
   scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-This pair of plots would suggest if there's difference between weekends and weekdays for number of wordsin content in a given article.  
+This pair of plots would suggest if there's a difference between weekends and weekdays for number of words in content.  
 
 ```{r}
 ggplot(data=train, aes(x=num_keywords)) +
@@ -194,11 +195,11 @@ This pair of plots will suggests if articles published on the weekend use the sa
 
 # Model fitting  
 
-Below is the model fitting part. In this part, four models are fitted. They are: linear regression model, random forest model and boosted tree model. For testing goodness of fit, we will be using the root mean squared error (RMSE).
+Below is the model fitting part. In this part, four models are fitted, those being two linear regression models, a random forest model, and a boosted tree model. For testing goodness of fit, we will be using the root mean squared error (RMSE).
 
 ## Linear Regression  
 We fit two different linear regression models here. Linear regression is a basic method to find a linear relationship between a response variable and one or more predictor variables. Here we will fit models using only the main effect of predictor variables as well as adding interaction terms of the linear models.  
-First we fit the forward selection.
+First we fit the model with only first-order terms.
 ```{r}
 #Use predictors used for the model
 lmod_1 <- train(shares~  n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
@@ -216,9 +217,9 @@ lmod1_RMSE <- RMSE(lmod_pred,test$shares)
 lmod1_RMSE
 ```
 
-Now we fit the linear model with polynomial term.Since in EDA, there seem to ba a curvature relationsip between `global_rate_positive_words` and `shares`, thus, a polynomial term is added here.  .
-```{r,eval = FALSE, echo = TRUE}
-#Fit linear model using different predictors with interaction term
+Now we fit the linear model with a polynomial term. Since in our EDA there seems to be a curvature relationship between `global_rate_positive_words` and `shares`, thus, a polynomial term is added here.
+```{r}
+#Fit linear model using different predictors with polynomial term
 lmod2 <- train(shares~ n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords + I(global_rate_positive_words^2),
                data = train,
                method = "lm",
@@ -236,8 +237,8 @@ lmod2_pred <- predict(lmod2, newdata = test)
 
 ## Random Forest Model  
 
-Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 3 to see fit the best tune.
-```{r,eval = FALSE, echo=TRUE}
+Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 3 to fit the best tune.
+```{r}
 #set tuning parameters
 rand_grid <- data.frame(mtry=1:3)
 
@@ -261,19 +262,19 @@ rand_pred <- predict(rand_fit, newdata = test)
 
 ## Boosted Tree Model  
 
-Below is the process of fitting a boosted tree model. A boosted tree is a method that builds sequentially. It's a slow-building method, that builds a new tree considering the error of the previous fit, updating predictions each new fit. Model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, I use combinations the following tuning parameters:  
+Below is the process of fitting a boosted tree model. A boosted tree is a method that builds sequentially. It's a slow-building method, that builds a new tree considering the error of the previous fit, updating predictions each new fit. Model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, we use combinations of the following tuning parameters:  
 + `n.trees`, the number of boosting iterations, with values 25, 50, 100, 150, and 200  
 + `interaction.depth`, the maximum tree depth, with values 1 through 5  
 + `shrinkage`, the learning rate of the model, with values 0.1, 0.2, 0.3, 0.4, and 0.5, and  
 + `n.minobsinnode`, the minimum node size, here using 10.
 
-```{r, eval = FALSE, echo=TRUE}
+```{r}
 #Set tuning grid for boosted tree model
 boost_grid <- expand.grid(n.trees = c(25,50,100,150,200),
                           interaction.depth = c(1:5),
                           shrinkage = c(0.1,0.2,0.3,0.4,0.5),
                           n.minobsinnode = 10)
-boost_grid
+#boost_grid
 
 #Train the model
 boost_fit <- train(shares ~n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
@@ -299,14 +300,22 @@ boost_RMSE
 Though the RMSE for the testing data has been given for each model in the previous section, we shall display them here and compare the models' performances.
 
 ```{r}
-data.frame(Model = c("Linear Regression, forward", "Linear Regression, subset", "Random Forest", "Boosted Tree"), 
-           RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE))
+#create and print data frame of models and RMSE's
+(fit_RMSE <- data.frame(Model = c("Linear Regression, first-order", "Linear Regression, polynomial", "Random Forest", "Boosted Tree"), RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE)))
 ```
-We want the model with the lowest RMSE. Comparing models, it seems that the linear regression model with the interaction terms has the lowest RMSE, followed by the random forest model, the linear regression model with only first order terms, and lastly the boosted tree. In this case we would want to choose the linear regression model with the interaction terms for prediction.
+
+The lower the RMSE, the better the fit. Therefore, we choose the model with the lowest RMSE for each channel, printed below:
+
+```{r}
+#Select row with lowest RMSE value and print
+min_val <- min(fit_RMSE$RMSE)
+fit_RMSE[fit_RMSE$RMSE == min_val,]
+```
+
 
 # Automation  
-Below is the part for automating the output:  
-```{r， eval = FALSE, echo=TRUE}
+Below is the part for automating the output for each channel:  
+```{r, eval = FALSE, echo=TRUE}
 channels <- c("data_channel_is_lifestyle", "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world")
 # Create file names
 name <- c("Lifestyle", "Entertainment", "Business", "SocialMedia",
