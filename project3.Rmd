@@ -2,7 +2,8 @@
 title: "ST 558 Project 3"
 author: "Katelyn Settlemyre, Xi Zeng"
 date: "2022-10-13"
-  
+params:
+  Channels: "data_channel_is_lifestyle"
 ---
 
 
@@ -39,7 +40,8 @@ The response variable that we are interested in is the `shares` variable, which 
 news <- readr::read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
 
 #Subset data with a single data channel
-subnews <- subset(news, params$Channels == 1)
+currentChannel <- params$Channels
+subnews <- news[news[, currentChannel] == 1, ]
 
 #Select variables for modeling and EDA
 subnews <- subnews %>% dplyr::select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares,num_keywords)
@@ -62,7 +64,7 @@ test <- subnews[-index,]
 
 # Summarizations and EDA  
 
-In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, and boxplots, as well as frequency tables are generated to examine the relationship between the variables.  
+In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, and boxplots, as well as frequency tables are generated to examine the relationship between the variables. Since  the EDA will be produced for different channels, thus the interpretation of the plot will be less detailed, but focus more on the trend.  
 ```{r}
 #Define function for producing summary statistics
 sum <- function(x){
@@ -88,7 +90,7 @@ We also show correlations between our selected variables. We show both a correla
 corrplot::corrplot(corrs)
 ```
 
-Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`.
+Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`. Thus, we consider remove `num_imgs` in our model fitting to avoid collinearity.  
 
 After producing summary statistics, some plots and tables are shown below:  
 
@@ -99,13 +101,13 @@ Below shows the frequency table of number of keywords.
  table(train$num_keywords)
 ```
 
-According to the table, most of the articles have more than 5 keywords. We assume that more keywords in the metadata will increase shares.  
+According to the table,  we will see the frequency count of the number of key words in each channel.  
 
-Here we have a frequency table of number of articles published on a weekend.
+Here we have a frequency table of number of articles published on a weekend or not.  
 ```{r}
 table(subnews$is_weekend)
 ```
-According to this table, we see that approximately one fifth of the articles in our data are published on the weekend.
+According to the table,  we will see the frequency count of the articles published during weekdays or on weekend for each channel.  
 
 ## Scatter plots
 
@@ -191,16 +193,15 @@ We fit two different linear regression models here. Linear regression is a basic
 First we fit the forward selection.
 ```{r}
 #Use forward selection to determine the predictors used for the model
-lm_forward <- train(shares~ .,
+lmod_1 <- train(shares~ + n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                     data = train,
-                    method = "glmStepAIC",
-                    direction = "forward",
+                    method = "lm",
                     trControl = trainControl("cv",number=10),
                     trace = FALSE)
-lm_forward$finalModel
+lmod_1$finalModel
 
 #Fit model with selected variables on test data
-lmod_pred <- predict(lm_forward, newdata = test)
+lmod_pred <- predict(lmod_1, newdata = test)
 
 #Calculate test error
 lmod1_RMSE <- RMSE(lmod_pred,test$shares)
@@ -208,7 +209,7 @@ lmod1_RMSE
 ```
 
 Now we fit the subset selection.
-```{r}
+```{r,eval = FALSE, echo = TRUE}
 #Fit linear model using subset method
 lm_subset <- train(shares~.^2,
                    data = train,
@@ -229,7 +230,7 @@ lsub_pred <- predict(lm_subset, newdata = test)
 ## Random Forest Model  
 
 Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 5 to see fit the best tune.
-```{r}
+```{r,eval = FALSE, echo=TRUE}
 #set tuning parameters
 rand_grid <- data.frame(mtry=1:5)
 
@@ -259,7 +260,7 @@ Below is the process of fitting a boosted tree model. A boosted tree is a method
 + `shrinkage`, the learning rate of the model, with values 0.1, 0.2, 0.3, 0.4, and 0.5, and  
 + `n.minobsinnode`, the minimum node size, here using 10.
 
-```{r}
+```{r, eval = FALSE, echo=TRUE}
 #Set tuning grid for boosted tree model
 boost_grid <- expand.grid(n.trees = c(25,50,100,150,200),
                           interaction.depth = c(1:5),
@@ -297,18 +298,19 @@ We want the model with the lowest RMSE. Comparing models, it seems that the line
 
 # Automation  
 Below is the part for automating the output:  
-```{r}
+```{r， eval = FALSE, echo=TRUE}
 channels <- c("data_channel_is_lifestyle", "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world")
 # Create file names
 name <- c("Lifestyle", "Entertainment", "Business", "SocialMedia",
           "Tech", "World")
 output_file <- paste0(name, "Analysis.md")
 # Create a list for each channel with just channel name parameter
-params <- lapply(channels, FUN = function(x){
+parameters = lapply(channels, FUN = function(x){
   list(Channels = x)
 })
 # Put into a data frame
-reports <- tibble::tibble(output_file, params)
+reports <- tibble::tibble(output_file, parameters)
+options(knitr.duplicate.label = "allow")
 # Automation
 apply(reports, MARGIN = 1, FUN = function(x) {
   rmarkdown::render(input = "project3.Rmd", 
