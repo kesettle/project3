@@ -130,7 +130,7 @@ ggplot(data = train, aes(x= n_tokens_content,y = shares)) +
        y = "Number of Shares",
        title = "Scatter Plot of Shares vs Number of Words in the Content")
 ```
-The above plot suggests articles with 2000 or fewer words are more likely to be shared than articles with more than 2000 words.
+The above plot will show the scatter plot between the number of shares and rate of positive words in the content. Also, the point is colored by if the article is published on weekend. There may be difference between the publish date or there may be curvature or linear relationship between number of shares and rate of positive words in the content， depending on how the scatter plot looks like.  
 
 ## Barplots
 
@@ -148,11 +148,13 @@ g + geom_bar(aes(fill = is_weekend),position = "dodge") +
 According to the bar plot, the frequency count of the each number of keywords is shown, also ,it will be group into weekday and weekend to see if there is any difference between them.  
 
 ```{r}
+
 ggplot(data = train, aes(x= n_tokens_title)) + 
   geom_bar() + labs(x="Words in Title", title = "Bar Plot of Number of Words in Title")
   
 ```
-This bar plot shows counts of articles by number of words in the title. Most of our articles have between 8 and 11 words in the title.
+
+This bar plot shows counts of articles by number of words in the title for each channel.  
 
 ## Boxplots  
 
@@ -165,23 +167,29 @@ g + geom_point(aes(color = is_weekend), position = "jitter")+
   scale_color_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-A jitter plot is generated to see the spread of shares data in weekdays and weekends.  
+A jitter plot is generated to see the spread of shares data in weekdays and weekends for each channel to see if publish data has an effect on the shares.  
 
 Here, we show boxplots for number of words in the article by weekend and number of keywords by weekend.
 ```{r}
 ggplot(data=train, aes(x=n_tokens_content)) +
   geom_boxplot(aes(fill=is_weekend)) +
-  labs(x = "Number of Words in Content")
+  labs(x = "Number of Words in Content")+
+  ggtitle("Boxplot for number of words in content on weekday/weekend")+
+  scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
 ```
 
-This pair of plots suggests there's not much difference between weekends and weekdays for number of words in a given article.
+This pair of plots would suggest if there's difference between weekends and weekdays for number of wordsin content in a given article.  
 
 ```{r}
 ggplot(data=train, aes(x=num_keywords)) +
   geom_boxplot(aes(fill=is_weekend)) +
-  labs(x = "Number of Keywords")
+  labs(x = "Number of Keywords") +
+  ggtitle("Boxplot for number of keywords on weekday/weekend")+
+  scale_fill_discrete(name = "Weekend Published", labels = c("No", "Yes"))
+  
 ```
-This pair of plots suggests that articles published on the weekend use more keywords than those published on a weekday.
+
+This pair of plots will suggests if articles published on the weekend use the same number of keywords than those published on a weekday.  
 
 
 # Model fitting  
@@ -189,16 +197,16 @@ This pair of plots suggests that articles published on the weekend use more keyw
 Below is the model fitting part. In this part, four models are fitted. They are: linear regression model, random forest model and boosted tree model. For testing goodness of fit, we will be using the root mean squared error (RMSE).
 
 ## Linear Regression  
-We fit two different linear regression models here. Linear regression is a basic method to find a linear relationship between a response variable and one or more predictor variables. Here we will fit models using a forward selection of the predictor variables as well as a subset selection of variables and interaction terms.  
+We fit two different linear regression models here. Linear regression is a basic method to find a linear relationship between a response variable and one or more predictor variables. Here we will fit models using only the main effect of predictor variables as well as adding interaction terms of the linear models.  
 First we fit the forward selection.
 ```{r}
-#Use forward selection to determine the predictors used for the model
-lmod_1 <- train(shares~ + n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
+#Use predictors used for the model
+lmod_1 <- train(shares~  n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                     data = train,
                     method = "lm",
-                    trControl = trainControl("cv",number=10),
-                    trace = FALSE)
-lmod_1$finalModel
+                    trControl = trainControl("cv",number=10))
+
+summary(lmod_1)
 
 #Fit model with selected variables on test data
 lmod_pred <- predict(lmod_1, newdata = test)
@@ -208,34 +216,33 @@ lmod1_RMSE <- RMSE(lmod_pred,test$shares)
 lmod1_RMSE
 ```
 
-Now we fit the subset selection.
+Now we fit the linear model with polynomial term.Since in EDA, there seem to ba a curvature relationsip between `global_rate_positive_words` and `shares`, thus, a polynomial term is added here.  .
 ```{r,eval = FALSE, echo = TRUE}
-#Fit linear model using subset method
-lm_subset <- train(shares~.^2,
-                   data = train,
-                   method = "lmStepAIC",
-                   trControl = trainControl("cv",number=5),
-                   trace = FALSE)
-lm_subset$finalModel
-lm_subset$results
+#Fit linear model using different predictors with interaction term
+lmod2 <- train(shares~ n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords + I(global_rate_positive_words^2),
+               data = train,
+               method = "lm",
+               trControl = trainControl("cv",number= 10))
+
+summary(lmod2)
 
 #fit with test data
-lsub_pred <- predict(lm_subset, newdata = test)
+lmod2_pred <- predict(lmod2, newdata = test)
 
 #test error:
-(lmod2_RMSE <- RMSE(lsub_pred,test$shares))
+(lmod2_RMSE <- RMSE(lmod2_pred,test$shares))
 ```
 
 
 ## Random Forest Model  
 
-Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 5 to see fit the best tune.
+Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 3 to see fit the best tune.
 ```{r,eval = FALSE, echo=TRUE}
 #set tuning parameters
-rand_grid <- data.frame(mtry=1:5)
+rand_grid <- data.frame(mtry=1:3)
 
 #train model
-rand_fit <- train(shares~.,
+rand_fit <- train(shares~n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                   data = train,
                   method = "rf",
                   preProcess = c("center", "scale"),
@@ -269,7 +276,8 @@ boost_grid <- expand.grid(n.trees = c(25,50,100,150,200),
 boost_grid
 
 #Train the model
-boost_fit <- train(shares ~., data = train,
+boost_fit <- train(shares ~n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
+                   data = train,
                    method = "gbm",
                    trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3),
                    preProcess = c("center", "scale"),
@@ -302,15 +310,15 @@ Below is the part for automating the output:
 channels <- c("data_channel_is_lifestyle", "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world")
 # Create file names
 name <- c("Lifestyle", "Entertainment", "Business", "SocialMedia",
-          "Tech", "World")
-output_file <- paste0(name, "Analysis.md")
+          "Technology", "World")
+output_file <- paste0(name, "ChannelAnalysis.md")
 # Create a list for each channel with just channel name parameter
 parameters = lapply(channels, FUN = function(x){
   list(Channels = x)
 })
 # Put into a data frame
 reports <- tibble::tibble(output_file, parameters)
-options(knitr.duplicate.label = "allow")
+#options(knitr.duplicate.label = "allow")
 # Automation
 apply(reports, MARGIN = 1, FUN = function(x) {
   rmarkdown::render(input = "project3.Rmd", 
