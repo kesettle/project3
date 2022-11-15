@@ -495,5 +495,5 @@ We automate the above process for each channel. Below we list the link to each c
 + [Entertainment](EntertainmentChannelAnalysis.html)  
 + [Business](BusinessChannelAnalysis.html)  
 + [Social Media](SocialMediaChannelAnalysis.html)  
-+ [Tech](TechnologuChannelAnalysis.html)  
++ [Tech](TechnologyChannelAnalysis.html)  
 + [World](WorldChannelAnalysis.html)
