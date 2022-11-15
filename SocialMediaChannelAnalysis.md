@@ -518,6 +518,12 @@ performances.
 (fit_RMSE <- data.frame(Model = c("Linear Regression, first-order", "Linear Regression, polynomial", "Random Forest", "Boosted Tree"), RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE)))
 ```
 
+    ##                            Model     RMSE
+    ## 1 Linear Regression, first-order 3477.747
+    ## 2  Linear Regression, polynomial 3478.718
+    ## 3                  Random Forest 3466.719
+    ## 4                   Boosted Tree 3466.334
+
 The lower the RMSE, the better the fit. Therefore, we choose the model
 with the lowest RMSE for each channel, printed below:
 
@@ -526,6 +532,9 @@ with the lowest RMSE for each channel, printed below:
 min_val <- min(fit_RMSE$RMSE)
 fit_RMSE[fit_RMSE$RMSE == min_val,]
 ```
+
+    ##                            Model     RMSE
+    ## 4                   Boosted Tree 3466.334
 
 # Automation
 
