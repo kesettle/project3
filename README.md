@@ -16,26 +16,17 @@ library(randomForest)
 
 # Introduction
 
-The data set used for analysis is the `OnlineNewsPopularity` sudata set
-from UCI Machine Learning Repository. The data set has 61 variables in
-total, as well as 39644 observations. First, we will take a subset data
-set by filter according to the data channel. The lifestyle channel is
-first chosen for analysis.  
-For our project, we will take variables(With description of each
-variable):  
+The data set used for analysis is the `OnlineNewsPopularity` data set from UCI Machine Learning Repository. The data set has 61 variables in total, as well as 39644 observations. First, we will take a subset data set by filter according to the data channel. There are 6 data channels,which are `lifestyle`, `entertainment`, `bus`, `socmed`,`tech`, `world`, .The lifestyle channel is first chosen for analysis.  
+For our project, we will take variables(With description of each variable):  
 + `n_tokens_title`: Number of words in the title  
 + `n_tokens_content`: Number of words in the content  
 + `num_imgs`: Number of images  
 + `average_token_length`: Average length of the words in the content  
 + `is_weekend`: Was the article published on the weekend?  
 + `global_rate_positive_words`: Rate of positive words in the content  
-+ `num_keywords`: Number of keywords in the metadata
++ `num_keywords`: Number of keywords in the metadata  
 
-The response variable that we are interested in is the `shares`
-variable, which stands for the number of sales in social network. A
-basic EDA will be performed at first to examine the relationship between
-covariates and `shares`. Then predicted modeling is applied to predict
-the number of sales, which will be illustrated in detail below.
+The response variable that we are interested in is the `shares` variable, which stands for the number of sales in social network. A basic EDA will be performed at first to examine the relationship between covariates and `shares`. Then predicted modeling is applied to predict the number of sales, which will be illustrated in detail below.  
 
 # Data read in
 
@@ -44,7 +35,8 @@ the number of sales, which will be illustrated in detail below.
 news <- readr::read_csv("OnlineNewsPopularity.csv", show_col_types = FALSE)
 
 #Subset data with a single data channel
-subnews <- subset(news, data_channel_is_lifestyle == 1)
+currentChannel <- params$Channels
+subnews <- news[news[, currentChannel] == 1, ]
 
 #Select variables for modeling and EDA
 subnews <- subnews %>% dplyr::select(n_tokens_title,n_tokens_content,num_imgs,average_token_length,is_weekend,global_rate_positive_words,shares,num_keywords)
@@ -53,9 +45,7 @@ subnews$is_weekend <- as.factor(subnews$is_weekend)
 
 # Data Split
 
-In this part, our data set is split into training set and test set, with
-training set contains 70% of the data and test set contains the other
-30%.
+In this part, our data set is split into a training set and a test set, with training set contains 70% of the data and the test set contains the other 30%.  
 
 ``` r
 #Set seed for reproduction
@@ -69,10 +59,7 @@ test <- subnews[-index,]
 
 # Summarizations and EDA
 
-In this part, basic summary statistics for the predictors are
-calculated. Also, some plots,including scatter plots, barplots, and
-boxplots, as well as frequency tables are generated to examine the
-relationship between the variables.
+In this part, basic summary statistics for the predictors are calculated. Also, some plots,including scatter plots, barplots, and boxplots, as well as frequency tables are generated to examine the relationship between the variables. Since  the EDA will be produced for different channels, thus the interpretation of the plot will be less detailed, but focus more on the trend.  
 
 ``` r
 #Define function for producing summary statistics
@@ -155,12 +142,9 @@ corrplot::corrplot(corrs)
 
 ![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-Our correlation matrix and plot shows that we don’t have strong
-relationships between variables. The strongest relationship is a
-correlation of 0.46 between `n_tokens_content` and `num_imgs`.
+Our correlation matrix and plot shows that we don't have strong relationships between variables. The strongest relationship is a correlation of 0.46 between `n_tokens_content` and `num_imgs`. Thus, we consider removing `num_imgs` in our model fitting to avoid collinearity.  
 
-After producing summary statistics, some plots and tables are shown
-below:
+After producing summary statistics, some plots and tables are shown below: 
 
 ## Frequency tables
 
@@ -174,11 +158,9 @@ Below shows the frequency table of number of keywords.
     ##   3   4   5   6   7   8   9  10 
     ##   5  26  69 146 228 272 250 476
 
-According to the table, most of the articles have more than 5 keywords.
-We assume that more keywords in the metadata will increase shares.
+According to the table, we will see the frequency count of the number of key words in each channel.  
 
-Here we have a frequency table of number of articles published on a
-weekend.
+Here we have a frequency table of number of articles published on a weekend or not. 
 
 ``` r
 table(subnews$is_weekend)
@@ -188,8 +170,7 @@ table(subnews$is_weekend)
     ##    0    1 
     ## 1707  392
 
-According to this table, we see that approximately one fifth of the
-articles in our data are published on the weekend.
+According to the table,  we will see the frequency count of the articles published during weekdays or on weekend for each channel.  
 
 ## Scatter plots
 
@@ -206,10 +187,7 @@ geom_point(aes(color = is_weekend)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
-According to the scatter plot above, it seems that when the rate of
-positive words exceeds 0.075, the number of shares of the article is
-relatively small. Also, those articles with high shares are mostly
-published during weekdays rather than weekend.
+According to the scatter plot above, it seems that when the rate of positive words exceeds 0.075, the number of shares of the article is relatively small. Also, those articles with high shares are mostly published during weekdays rather than weekend.  
 
 ``` r
 ggplot(data = train, aes(x= n_tokens_content,y = shares)) + 
@@ -219,9 +197,9 @@ ggplot(data = train, aes(x= n_tokens_content,y = shares)) +
        title = "Scatter Plot of Shares vs Number of Words in the Content")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- --> The above
-plot suggests articles with 2000 or fewer words are more likely to be
-shared than articles with more than 2000 words.
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- --> 
+
+The above plot will show the scatter plot between the number of shares and rate of positive words in the content. Also, the point is colored by if the article is published on weekend. There may be difference between the publish date or there may be curvature or linear relationship between number of shares and rate of positive words in the content， depending on how the scatter plot looks like.  
 
 ## Barplots
 
@@ -238,20 +216,18 @@ g + geom_bar(aes(fill = is_weekend),position = "dodge") +
 
 ![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
-According to the bar plot, the frequency count of the each number of
-keywords is shown, also ,it will be group into weekday and weekend to
-see if there is any difference between them.
+According to the bar plot, the frequency count of the each number of keywords is shown, also ,it will be group into weekday and weekend to see if there is any difference between them.  
 
 ``` r
 ggplot(data = train, aes(x= n_tokens_title)) + 
   geom_bar() + labs(x="Words in Title", title = "Bar Plot of Number of Words in Title")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- --> This bar
-plot shows counts of articles by number of words in the title. Most of
-our articles have between 8 and 11 words in the title.
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- --> 
 
-## Boxplots
+This bar plot shows counts of articles by number of words in the title for each channel.
+
+## Boxplots and Jitter Plots
 
 Below are the box plot for sales:
 
@@ -264,11 +240,9 @@ g + geom_point(aes(color = is_weekend), position = "jitter")+
 
 ![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
-A jitter plot is generated to see the spread of shares data in weekdays
-and weekends.
+A jitter plot is generated to see the spread of shares data in weekdays and weekends for each channel to see if publish data has an effect on the shares.  
 
-Here, we show boxplots for number of words in the article by weekend and
-number of keywords by weekend.
+Here, we show boxplots for number of words in the article by weekend and number of keywords by weekend.
 
 ``` r
 ggplot(data=train, aes(x=n_tokens_content)) +
@@ -278,8 +252,7 @@ ggplot(data=train, aes(x=n_tokens_content)) +
 
 ![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
-This pair of plots suggests there’s not much difference between weekends
-and weekdays for number of words in a given article.
+This pair of plots would suggest if there's a difference between weekends and weekdays for number of words in content. 
 
 ``` r
 ggplot(data=train, aes(x=num_keywords)) +
@@ -287,47 +260,62 @@ ggplot(data=train, aes(x=num_keywords)) +
   labs(x = "Number of Keywords")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- --> This pair of
-plots suggests that articles published on the weekend use more keywords
-than those published on a weekday.
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- --> 
+
+This pair of plots will suggests if articles published on the weekend use the same number of keywords than those published on a weekday.  
 
 # Model fitting
 
-Below is the model fitting part. In this part, four models are fitted.
-They are: linear regression model, random forest model and boosted tree
-model. For testing goodness of fit, we will be using the root mean
-squared error (RMSE).
+Below is the model fitting part. In this part, four models are fitted, those being two linear regression models, a random forest model, and a boosted tree model. For testing goodness of fit, we will be using the root mean squared error (RMSE).
+
 
 ## Linear Regression
 
-We fit two different linear regression models here. Linear regression is
-a basic method to find a linear relationship between a response variable
-and one or more predictor variables. Here we will fit models using a
-forward selection of the predictor variables as well as a subset
-selection of variables and interaction terms.  
-First we fit the forward selection.
+We fit two different linear regression models here. Linear regression is a basic method to find a linear relationship between a response variable and one or more predictor variables. Here we will fit models using only the main effect of predictor variables as well as adding interaction terms of the linear models.  
+First we fit the model with only first-order terms.
 
 ``` r
-#Use forward selection to determine the predictors used for the model
-lm_forward <- train(shares~ .,
+#Use predictors used for the model
+lmod_1 <- train(shares~  n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                     data = train,
-                    method = "glmStepAIC",
-                    direction = "forward",
-                    trControl = trainControl("cv",number=10),
-                    trace = FALSE)
-lm_forward$finalModel
+                    method = "lm",
+                    trControl = trainControl("cv",number=10))
+
+summary(lmod_1)
 ```
 
     ## 
-    ## Call:  NULL
+    ## Call:  lm(formula = .outcome ~ ., data = dat)
     ## 
+    ## Residuals:
+    ##   Min     1Q Median     3Q    Max 
+    ## -9717  -2572  -1877   -415 204675 
+    ##
     ## Coefficients:
-    ##          (Intercept)      n_tokens_content  average_token_length  
-    ##             5908.456                 1.196              -638.876  
-    ## 
-    ## Degrees of Freedom: 1471 Total (i.e. Null);  1469 Residual
-    ## Null Deviance:       1.138e+11 
-    ## Residual Deviance: 1.129e+11     AIC: 30910
+    ##                         Estimate Std. Error
+    ## (Intercept)                  4740.197   2747.461
+    ## n_tokens_title                 37.349    122.436
+    ## n_tokens_content                1.208      0.392
+    ## average_token_length         -519.645    433.995
+    ## is_weekend1                   262.478    588.332
+    ## global_rate_positive_words -14060.296  15856.207
+    ## num_keywords                  100.312    140.562
+    ##                            t value Pr(>|t|)   
+    ## (Intercept)                  1.725  0.08468 . 
+    ## n_tokens_title               0.305  0.76037   
+    ## n_tokens_content             3.082  0.00209 **
+    ## average_token_length        -1.197  0.23136   
+    ## is_weekend1                  0.446  0.65556   
+    ## global_rate_positive_words  -0.887  0.37537   
+    ## num_keywords                 0.714  0.47556   
+    ## ---
+    ## Signif. codes:  
+    ## 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+    ##
+    ## Residual standard error: 8775 on 1465 degrees of freedom
+    ## Multiple R-squared:  0.008892,	Adjusted R-squared:  0.004833 
+    ## F-statistic: 2.191 on 6 and 1465 DF,  p-value: 0.04143
+
 
 ``` r
 #Fit model with selected variables on test data
@@ -338,43 +326,45 @@ lmod1_RMSE <- RMSE(lmod_pred,test$shares)
 lmod1_RMSE
 ```
 
-    ## [1] 9078.315
+    ## [1] 9089.671
 
-Now we fit the subset selection.
+Now we fit the linear model with a polynomial term. Since in our EDA there seems to be a curvature relationship between `global_rate_positive_words` and `shares`, thus, a polynomial term is added here.
 
 ``` r
-#Fit linear model using subset method
-lm_subset <- train(shares~.^2,
-                   data = train,
-                   method = "lmStepAIC",
-                   trControl = trainControl("cv",number=5),
-                   trace = FALSE)
-lm_subset$finalModel
+#Fit linear model using different predictors with polynomial term
+lmod2 <- train(shares~ n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords + I(global_rate_positive_words^2),
+               data = train,
+               method = "lm",
+               trControl = trainControl("cv",number= 10))
+
+summary(lmod2)
 ```
 
     ## 
     ## Call:
-    ## lm(formula = .outcome ~ `n_tokens_title:num_imgs` + `n_tokens_content:num_imgs` + 
-    ##     `n_tokens_content:global_rate_positive_words` + `n_tokens_content:num_keywords` + 
-    ##     `average_token_length:global_rate_positive_words` + `average_token_length:num_keywords`, 
-    ##     data = dat)
+    ## lm(formula = .outcome ~ ., data = dat)
+    ##
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ##  -9926  -2552  -1865   -417 204714 
     ## 
     ## Coefficients:
-    ##                                       (Intercept)                          `n_tokens_title:num_imgs`  
-    ##                                         3.699e+03                                          6.241e+00  
-    ##                       `n_tokens_content:num_imgs`      `n_tokens_content:global_rate_positive_words`  
-    ##                                        -3.147e-02                                          1.613e+02  
-    ##                   `n_tokens_content:num_keywords`  `average_token_length:global_rate_positive_words`  
-    ##                                        -6.304e-01                                         -2.119e+04  
-    ##               `average_token_length:num_keywords`  
-    ##                                         7.664e+01
+    ##                                     Estimate Std. Error t value Pr(>|t|)   
+    ## (Intercept)                        4.918e+03  2.765e+03   1.779  0.07550 . 
+    ## n_tokens_title                     3.764e+01  1.225e+02   0.307  0.75859   
+    ## n_tokens_content                   1.257e+00  4.009e-01   3.135  0.00175 **
+    ## average_token_length              -3.920e+02  4.865e+02  -0.806  0.42049   
+    ## is_weekend1                        2.642e+02  5.885e+02   0.449  0.65347   
+    ## global_rate_positive_words        -5.195e+04  6.707e+04  -0.775  0.43867   
+    ## num_keywords                       9.977e+01  1.406e+02   0.710  0.47805   
+    ## `I(global_rate_positive_words^2)`  4.049e+05  6.963e+05   0.582  0.56099   
+    ## ---
+    ## Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+    ## 
+    ## Residual standard error: 8777 on 1464 degrees of freedom
+    ## Multiple R-squared:  0.009121,	Adjusted R-squared:  0.004383 
+    ## F-statistic: 1.925 on 7 and 1464 DF,  p-value: 0.06215
 
-``` r
-lm_subset$results
-```
-
-    ##   parameter     RMSE    Rsquared      MAE   RMSESD RsquaredSD    MAESD
-    ## 1      none 8000.408 0.007283393 3464.485 4366.736 0.01070585 549.7855
 
 ``` r
 #fit with test data
@@ -384,20 +374,15 @@ lsub_pred <- predict(lm_subset, newdata = test)
 (lmod2_RMSE <- RMSE(lsub_pred,test$shares))
 ```
 
-    ## [1] 9072.598
+    ## [1] 9090.454
 
 ## Random Forest Model
 
-Here we fit a random forest model. A random forest is an method where
-multiple tree models are fit from bootstrap samples using a subset of
-predictor variables for each bootstrap sample. The final prediction is
-an average of the bootstrap predictions. We use the tuning parameter
-`mtry`, the number of randomly selected predictors, using values 1
-through 5 to see fit the best tune.
+Here we fit a random forest model. A random forest is an method where multiple tree models are fit from bootstrap samples using a subset of predictor variables for each bootstrap sample. The final prediction is an average of the bootstrap predictions. We use the tuning parameter `mtry`, the number of randomly selected predictors, using values 1 through 3 to fit the best tune.
 
 ``` r
 #set tuning parameters
-rand_grid <- data.frame(mtry=1:5)
+rand_grid <- data.frame(mtry=1:3)
 
 #train model
 rand_fit <- train(shares~.,
@@ -438,17 +423,10 @@ rand_pred <- predict(rand_fit, newdata = test)
 
 ## Boosted Tree Model
 
-Below is the process of fitting a boosted tree model. A boosted tree is
-a method that builds sequentially. It’s a slow-building method, that
-builds a new tree considering the error of the previous fit, updating
-predictions each new fit. Model performance is tested by fitting the
-final tuned model on test set and calculate the test RMSE. Here, I use
-combinations the following tuning parameters:  
-+ `n.trees`, the number of boosting iterations, with values 25, 50, 100,
-150, and 200  
+Below is the process of fitting a boosted tree model. A boosted tree is a method that builds sequentially. It's a slow-building method, that builds a new tree considering the error of the previous fit, updating predictions each new fit. Model performance is tested by fitting the final tuned model on test set and calculate the test RMSE. Here, we use combinations of the following tuning parameters:  
++ `n.trees`, the number of boosting iterations, with values 25, 50, 100, 150, and 200  
 + `interaction.depth`, the maximum tree depth, with values 1 through 5  
-+ `shrinkage`, the learning rate of the model, with values 0.1, 0.2,
-0.3, 0.4, and 0.5, and  
++ `shrinkage`, the learning rate of the model, with values 0.1, 0.2, 0.3, 0.4, and 0.5, and  
 + `n.minobsinnode`, the minimum node size, here using 10.
 
 ``` r
@@ -457,137 +435,8 @@ boost_grid <- expand.grid(n.trees = c(25,50,100,150,200),
                           interaction.depth = c(1:5),
                           shrinkage = c(0.1,0.2,0.3,0.4,0.5),
                           n.minobsinnode = 10)
-boost_grid
-```
+#boost_grid
 
-    ##     n.trees interaction.depth shrinkage n.minobsinnode
-    ## 1        25                 1       0.1             10
-    ## 2        50                 1       0.1             10
-    ## 3       100                 1       0.1             10
-    ## 4       150                 1       0.1             10
-    ## 5       200                 1       0.1             10
-    ## 6        25                 2       0.1             10
-    ## 7        50                 2       0.1             10
-    ## 8       100                 2       0.1             10
-    ## 9       150                 2       0.1             10
-    ## 10      200                 2       0.1             10
-    ## 11       25                 3       0.1             10
-    ## 12       50                 3       0.1             10
-    ## 13      100                 3       0.1             10
-    ## 14      150                 3       0.1             10
-    ## 15      200                 3       0.1             10
-    ## 16       25                 4       0.1             10
-    ## 17       50                 4       0.1             10
-    ## 18      100                 4       0.1             10
-    ## 19      150                 4       0.1             10
-    ## 20      200                 4       0.1             10
-    ## 21       25                 5       0.1             10
-    ## 22       50                 5       0.1             10
-    ## 23      100                 5       0.1             10
-    ## 24      150                 5       0.1             10
-    ## 25      200                 5       0.1             10
-    ## 26       25                 1       0.2             10
-    ## 27       50                 1       0.2             10
-    ## 28      100                 1       0.2             10
-    ## 29      150                 1       0.2             10
-    ## 30      200                 1       0.2             10
-    ## 31       25                 2       0.2             10
-    ## 32       50                 2       0.2             10
-    ## 33      100                 2       0.2             10
-    ## 34      150                 2       0.2             10
-    ## 35      200                 2       0.2             10
-    ## 36       25                 3       0.2             10
-    ## 37       50                 3       0.2             10
-    ## 38      100                 3       0.2             10
-    ## 39      150                 3       0.2             10
-    ## 40      200                 3       0.2             10
-    ## 41       25                 4       0.2             10
-    ## 42       50                 4       0.2             10
-    ## 43      100                 4       0.2             10
-    ## 44      150                 4       0.2             10
-    ## 45      200                 4       0.2             10
-    ## 46       25                 5       0.2             10
-    ## 47       50                 5       0.2             10
-    ## 48      100                 5       0.2             10
-    ## 49      150                 5       0.2             10
-    ## 50      200                 5       0.2             10
-    ## 51       25                 1       0.3             10
-    ## 52       50                 1       0.3             10
-    ## 53      100                 1       0.3             10
-    ## 54      150                 1       0.3             10
-    ## 55      200                 1       0.3             10
-    ## 56       25                 2       0.3             10
-    ## 57       50                 2       0.3             10
-    ## 58      100                 2       0.3             10
-    ## 59      150                 2       0.3             10
-    ## 60      200                 2       0.3             10
-    ## 61       25                 3       0.3             10
-    ## 62       50                 3       0.3             10
-    ## 63      100                 3       0.3             10
-    ## 64      150                 3       0.3             10
-    ## 65      200                 3       0.3             10
-    ## 66       25                 4       0.3             10
-    ## 67       50                 4       0.3             10
-    ## 68      100                 4       0.3             10
-    ## 69      150                 4       0.3             10
-    ## 70      200                 4       0.3             10
-    ## 71       25                 5       0.3             10
-    ## 72       50                 5       0.3             10
-    ## 73      100                 5       0.3             10
-    ## 74      150                 5       0.3             10
-    ## 75      200                 5       0.3             10
-    ## 76       25                 1       0.4             10
-    ## 77       50                 1       0.4             10
-    ## 78      100                 1       0.4             10
-    ## 79      150                 1       0.4             10
-    ## 80      200                 1       0.4             10
-    ## 81       25                 2       0.4             10
-    ## 82       50                 2       0.4             10
-    ## 83      100                 2       0.4             10
-    ## 84      150                 2       0.4             10
-    ## 85      200                 2       0.4             10
-    ## 86       25                 3       0.4             10
-    ## 87       50                 3       0.4             10
-    ## 88      100                 3       0.4             10
-    ## 89      150                 3       0.4             10
-    ## 90      200                 3       0.4             10
-    ## 91       25                 4       0.4             10
-    ## 92       50                 4       0.4             10
-    ## 93      100                 4       0.4             10
-    ## 94      150                 4       0.4             10
-    ## 95      200                 4       0.4             10
-    ## 96       25                 5       0.4             10
-    ## 97       50                 5       0.4             10
-    ## 98      100                 5       0.4             10
-    ## 99      150                 5       0.4             10
-    ## 100     200                 5       0.4             10
-    ## 101      25                 1       0.5             10
-    ## 102      50                 1       0.5             10
-    ## 103     100                 1       0.5             10
-    ## 104     150                 1       0.5             10
-    ## 105     200                 1       0.5             10
-    ## 106      25                 2       0.5             10
-    ## 107      50                 2       0.5             10
-    ## 108     100                 2       0.5             10
-    ## 109     150                 2       0.5             10
-    ## 110     200                 2       0.5             10
-    ## 111      25                 3       0.5             10
-    ## 112      50                 3       0.5             10
-    ## 113     100                 3       0.5             10
-    ## 114     150                 3       0.5             10
-    ## 115     200                 3       0.5             10
-    ## 116      25                 4       0.5             10
-    ## 117      50                 4       0.5             10
-    ## 118     100                 4       0.5             10
-    ## 119     150                 4       0.5             10
-    ## 120     200                 4       0.5             10
-    ## 121      25                 5       0.5             10
-    ## 122      50                 5       0.5             10
-    ## 123     100                 5       0.5             10
-    ## 124     150                 5       0.5             10
-    ## 125     200                 5       0.5             10
-
-``` r
 #Train the model
 boost_fit <- train(shares ~., data = train,
                    method = "gbm",
@@ -615,33 +464,36 @@ boost_RMSE
 
 # Comparison
 
-Though the RMSE for the testing data has been given for each model in
-the previous section, we shall display them here and compare the models’
-performances.
+Though the RMSE for the testing data has been given for each model in the previous section, we shall display them here and compare the models' performances.
 
 ``` r
-data.frame(Model = c("Linear Regression, forward", "Linear Regression, subset", "Random Forest", "Boosted Tree"), 
-           RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE))
+#create and print data frame of models and RMSE's
+(fit_RMSE <- data.frame(Model = c("Linear Regression, first-order", "Linear Regression, polynomial", "Random Forest", "Boosted Tree"), RMSE = c(lmod1_RMSE, lmod2_RMSE, rand_RMSE, boost_RMSE)))
 ```
 
     ##                        Model     RMSE
-    ## 1 Linear Regression, forward 9078.315
-    ## 2  Linear Regression, subset 9072.598
+    ## 1 Linear Regression, forward 9089.671
+    ## 2  Linear Regression, subset 9090.454
     ## 3              Random Forest 9074.526
     ## 4               Boosted Tree 9092.104
 
-We want the model with the lowest RMSE. Comparing models, it seems that
-the linear regression model with the interaction terms has the lowest
-RMSE, followed by the random forest model, the linear regression model
-with only first order terms, and lastly the boosted tree. In this case
-we would want to choose the linear regression model with the interaction
-terms for prediction.
+The lower the RMSE, the better the fit. Therefore, we choose the model with the lowest RMSE for each channel, printed below:
+
+```r
+#Select row with lowest RMSE value and print
+min_val <- min(fit_RMSE$RMSE)
+fit_RMSE[fit_RMSE$RMSE == min_val,]
+```
+
+    ##                        Model     RMSE
+    ## 3              Random Forest 9074.526
+
 
 # Automation
 We automate the above process for each channel. Below we list the link to each channel. Note we link to the html file even though the file we create is a .md file:  
-+ [Lifestyle](LifestyleAnalysis.html)  
-+ [Entertainment](EntertainmentAnalysis.html)  
-+ [Business](BusinessAnalysis.html)  
-+ [Social Media](SocialMediaAnalysis.html)  
-+ [Tech](TechAnalysis.html)  
-+ [World](WorldAnalysis.html)
++ [Lifestyle](LifestyleChannelAnalysis.html)  
++ [Entertainment](EntertainmentChannelAnalysis.html)  
++ [Business](BusinessChannelAnalysis.html)  
++ [Social Media](SocialMediaChannelAnalysis.html)  
++ [Tech](TechnologuChannelAnalysis.html)  
++ [World](WorldChannelAnalysis.html)
