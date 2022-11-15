@@ -385,7 +385,7 @@ Here we fit a random forest model. A random forest is an method where multiple t
 rand_grid <- data.frame(mtry=1:3)
 
 #train model
-rand_fit <- train(shares~.,
+rand_fit <- train(shares~n_tokens_title + n_tokens_content + average_token_length + is_weekend +global_rate_positive_words + num_keywords,
                   data = train,
                   method = "rf",
                   preProcess = c("center", "scale"),
@@ -408,8 +408,8 @@ rand_fit$finalModel
     ##                      Number of trees: 500
     ## No. of variables tried at each split: 1
     ## 
-    ##           Mean of squared residuals: 77906195
-    ##                     % Var explained: -0.76
+    ##           Mean of squared residuals: 77874133
+    ##                     % Var explained: -0.72
 
 ``` r
 #fit with test data
@@ -419,7 +419,7 @@ rand_pred <- predict(rand_fit, newdata = test)
 (rand_RMSE <- RMSE(rand_pred, test$shares))
 ```
 
-    ## [1] 9074.526
+    ## [1] 9097.56
 
 ## Boosted Tree Model
 
@@ -449,7 +449,7 @@ boost_fit$bestTune
 ```
 
     ##    n.trees interaction.depth shrinkage n.minobsinnode
-    ## 26      25                 1       0.2             10
+    ##  1      25                 1       0.1             10
 
 ``` r
 #Fit the final boosted tree model with test data
@@ -460,7 +460,7 @@ boost_RMSE <- RMSE(boost_pred,test$shares)
 boost_RMSE
 ```
 
-    ## [1] 9092.104
+    ## [1] 9086.619
 
 # Comparison
 
@@ -474,8 +474,8 @@ Though the RMSE for the testing data has been given for each model in the previo
     ##                        Model     RMSE
     ## 1 Linear Regression, forward 9089.671
     ## 2  Linear Regression, subset 9090.454
-    ## 3              Random Forest 9074.526
-    ## 4               Boosted Tree 9092.104
+    ## 3              Random Forest 9097.560
+    ## 4               Boosted Tree 9086.619
 
 The lower the RMSE, the better the fit. Therefore, we choose the model with the lowest RMSE for each channel, printed below:
 
@@ -486,7 +486,7 @@ fit_RMSE[fit_RMSE$RMSE == min_val,]
 ```
 
     ##                        Model     RMSE
-    ## 3              Random Forest 9074.526
+    ## 4               Boosted Tree 9086.619
 
 
 # Automation
